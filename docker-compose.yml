@@ -1,0 +1,156 @@
+# docker-compose.yml
+# Orquesta todos los servicios del proyecto en contenedores
+# Uso: docker compose up -d
+
+version: '3.8'
+
+networks:
+  coffee_chain_network:
+    driver: bridge
+
+volumes:
+  dbt_target:
+  airflow_logs:
+
+x-aws-env: &aws-env
+  AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+  S3_BUCKET: ${S3_BUCKET}
+  ATHENA_DATABASE: ${ATHENA_DATABASE}
+  ATHENA_RESULTS: ${ATHENA_RESULTS}
+
+services:
+  ingestion:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ingestion
+    container_name: coffee_ingestion
+    environment:
+      <<: *aws-env
+    volumes:
+      - ./ingestion:/app/ingestion
+      - ./data:/app/data
+    networks:
+      - coffee_chain_network
+    profiles: ["ingestion"]
+
+  dbt:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dbt
+    container_name: coffee_dbt
+    environment:
+      <<: *aws-env
+      ATHENA_WORKGROUP: ${ATHENA_WORKGROUP}
+      DBT_TARGET: ${DBT_TARGET:-dev}
+    volumes:
+      - ./dbt:/app/dbt
+      - dbt_target:/app/dbt/target
+    networks:
+      - coffee_chain_network
+    profiles: ["dbt"]
+
+  quality_gates:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ingestion
+    container_name: coffee_quality
+    environment:
+      <<: *aws-env
+    volumes:
+      - ./airflow/include/scripts:/app/scripts
+      - ./airflow/include/sql:/app/sql
+    command: python /app/scripts/run_quality_gates.py
+    networks:
+      - coffee_chain_network
+    profiles: ["quality"]
+
+  airflow-webserver:
+    image: apache/airflow:2.8.1
+    container_name: coffee_airflow_web
+    environment:
+      <<: *aws-env
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      AIRFLOW__CORE__FERNET_KEY: ''
+      AIRFLOW__WEBSERVER__SECRET_KEY: 'coffee_chain_secret'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      REDSHIFT_HOST: ${REDSHIFT_HOST}
+      REDSHIFT_USER: ${REDSHIFT_USER}
+      REDSHIFT_PASSWORD: ${REDSHIFT_PASSWORD}
+      REDSHIFT_DB: ${REDSHIFT_DB}
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/include:/opt/airflow/include
+      - airflow_logs:/opt/airflow/logs
+    ports:
+      - "8080:8080"
+    command: webserver
+    depends_on:
+      - airflow-db
+      - airflow-init
+    networks:
+      - coffee_chain_network
+    profiles: ["airflow"]
+
+  airflow-scheduler:
+    image: apache/airflow:2.8.1
+    container_name: coffee_airflow_scheduler
+    environment:
+      <<: *aws-env
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      AIRFLOW__CORE__FERNET_KEY: ''
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      REDSHIFT_HOST: ${REDSHIFT_HOST}
+      REDSHIFT_USER: ${REDSHIFT_USER}
+      REDSHIFT_PASSWORD: ${REDSHIFT_PASSWORD}
+      REDSHIFT_DB: ${REDSHIFT_DB}
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/include:/opt/airflow/include
+      - airflow_logs:/opt/airflow/logs
+    command: scheduler
+    depends_on:
+      - airflow-db
+      - airflow-init
+    networks:
+      - coffee_chain_network
+    profiles: ["airflow"]
+
+  airflow-init:
+    image: apache/airflow:2.8.1
+    container_name: coffee_airflow_init
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    command: >
+      bash -c "
+        airflow db migrate &&
+        airflow users create
+          --username admin
+          --password admin
+          --firstname Coffee
+          --lastname Chain
+          --role Admin
+          --email admin@coffeechain.com
+      "
+    depends_on:
+      - airflow-db
+    networks:
+      - coffee_chain_network
+    profiles: ["airflow"]
+
+  airflow-db:
+    image: postgres:15
+    container_name: coffee_airflow_db
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - ./docker/postgres_data:/var/lib/postgresql/data
+    networks:
+      - coffee_chain_network
+    profiles: ["airflow"]

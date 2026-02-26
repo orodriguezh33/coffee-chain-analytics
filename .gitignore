@@ -1,0 +1,37 @@
+# Variables de entorno y credenciales - NUNCA subir a GitHub
+.env
+*.env
+.aws/
+
+# Datos crudos - no subir el CSV al repo (es grande y es dato fuente)
+data/raw/
+data/bronze/
+data/silver/
+data/gold/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.pyc
+
+# dbt
+dbt/target/
+dbt/logs/
+dbt/.user.yml
+
+# Airflow
+airflow/logs/
+airflow/.astro/
+
+# Docker
+*.log
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
