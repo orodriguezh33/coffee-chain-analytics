@@ -1,0 +1,17 @@
+pos_product_detail,canonical_product_name,size_code,cost_required,recipe_required,product_group,notes
+Latte Sm,Latte,Sm,true,true,beverage_prepared,size variant
+Latte Rg,Latte,Rg,true,true,beverage_prepared,size variant
+Latte Lg,Latte,Lg,true,true,beverage_prepared,size variant
+Cappuccino Sm,Cappuccino,Sm,true,true,beverage_prepared,size variant
+Cappuccino Rg,Cappuccino,Rg,true,true,beverage_prepared,size variant
+Cappuccino Lg,Cappuccino,Lg,true,true,beverage_prepared,size variant
+Americano Sm,Americano,Sm,true,true,beverage_prepared,size variant
+Americano Rg,Americano,Rg,true,true,beverage_prepared,size variant
+Americano Lg,Americano,Lg,true,true,beverage_prepared,size variant
+Earl Grey Rg,Earl Grey,Rg,true,true,tea_prepared,add canonical to synthetic catalog
+Earl Grey Lg,Earl Grey,Lg,true,true,tea_prepared,add canonical to synthetic catalog
+Peppermint Rg,Peppermint,Rg,true,true,tea_prepared,add canonical to synthetic catalog
+Chocolate Croissant,Chocolate Croissant,,true,true,bakery_prepared,add recipe and cost
+I Need My Bean! T-shirt,I Need My Bean! T-shirt,,false,false,merchandise,no recipe expected
+I Need My Bean! Diner mug,I Need My Bean! Diner mug,,false,false,merchandise,no recipe expected
+I Need My Bean! Latte cup,I Need My Bean! Latte cup,,false,false,merchandise,no recipe expected
