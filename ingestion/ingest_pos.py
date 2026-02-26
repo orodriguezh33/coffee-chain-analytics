@@ -78,7 +78,7 @@ def validate_raw_pos(df: pd.DataFrame) -> dict:
     }
 
 
-def save_to_bronze(df: pd.DataFrame, run_date: str) -> Path:
+def save_to_bronze(df: pd.DataFrame, run_date: str, source_file: str) -> Path:
     """
     Save POS CSV using Bronze partition pattern:
     data/bronze/pos/transactions/ingestion_date=YYYY-MM-DD/
@@ -89,7 +89,7 @@ def save_to_bronze(df: pd.DataFrame, run_date: str) -> Path:
     df = df.copy()
     df["ingestion_date"] = run_date
     df["ingestion_timestamp"] = datetime.now().isoformat()
-    df["source_file"] = "coffee_shop_sales.csv"
+    df["source_file"] = source_file
 
     output_path = output_dir / f"coffee_shop_sales_{run_date}.csv"
     df.to_csv(output_path, index=False)
@@ -105,14 +105,30 @@ def run_ingest_pos() -> str:
     print("INGESTION: POS Transactions -> Bronze")
     print("=" * 50)
 
-    csv_files = sorted(RAW_PATH.glob("*.csv"))
-    if not csv_files:
+    preferred_csv = RAW_PATH / "coffee_shop_sales.csv"
+    if preferred_csv.exists():
+        csv_path = preferred_csv
+    else:
+        csv_files = sorted(RAW_PATH.glob("*.csv"))
+        if not csv_files:
+            raise FileNotFoundError(
+                f"No CSV files found in {RAW_PATH}. "
+                "Please copy coffee_shop_sales.csv to data/raw/"
+            )
+        if len(csv_files) > 1:
+            raise FileExistsError(
+                "Multiple CSV files found in data/raw and "
+                "coffee_shop_sales.csv is missing. "
+                f"Please keep only one CSV or rename the target file. Found: "
+                f"{[p.name for p in csv_files]}"
+            )
+        csv_path = csv_files[0]
+
+    if not csv_path.exists():
         raise FileNotFoundError(
-            f"No CSV files found in {RAW_PATH}. "
+            f"CSV not found: {csv_path}. "
             "Please copy coffee_shop_sales.csv to data/raw/"
         )
-
-    csv_path = csv_files[0]
     print(f"  Found: {csv_path.name}")
 
     df = load_raw_pos(csv_path)
@@ -125,7 +141,7 @@ def run_ingest_pos() -> str:
     print(f"  ✓ Columns: {result['cols']}")
 
     print(f"  Saving to Bronze (date: {RUN_DATE})...")
-    output_path = save_to_bronze(df, RUN_DATE)
+    output_path = save_to_bronze(df, RUN_DATE, csv_path.name)
 
     print("\n✓ POS ingestion complete")
     print(f"  Output: {output_path}")
