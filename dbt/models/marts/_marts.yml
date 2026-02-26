@@ -1,0 +1,91 @@
+version: 2
+
+models:
+  - name: fct_sales
+    description: "Ventas a nivel de linea de producto."
+    columns:
+      - name: sales_key
+        tests: [unique, not_null]
+      - name: date_key
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+      - name: store_key
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_store')
+              field: store_key
+      - name: transaction_qty
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+      - name: gross_margin_pct
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: -100
+              max_value: 100
+
+  - name: fct_waste
+    description: "Merma por ingrediente, tienda y dia."
+    columns:
+      - name: waste_key
+        tests: [unique, not_null]
+      - name: waste_rate_pct
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: -100
+              max_value: 1000
+
+  - name: fct_labor
+    description: "Labor agregado por tienda y dia."
+    columns:
+      - name: labor_key
+        tests: [unique, not_null]
+      - name: labor_status
+        tests:
+          - accepted_values:
+              values: ['ON TARGET', 'WATCH', 'OVER TARGET']
+
+  - name: fct_inventory_snapshot
+    description: "Snapshot diario de inventario con riesgo de quiebre."
+    columns:
+      - name: snapshot_key
+        tests: [unique, not_null]
+      - name: stockout_risk_flag
+        tests:
+          - accepted_values:
+              values: ['HIGH', 'MEDIUM', 'LOW']
+
+  - name: dim_date
+    columns:
+      - name: date_key
+        tests: [unique, not_null]
+
+  - name: dim_store
+    columns:
+      - name: store_key
+        tests: [unique, not_null]
+      - name: store_id
+        tests:
+          - unique
+          - not_null
+          - accepted_values:
+              values: [3, 5, 8]
+
+  - name: dim_product
+    columns:
+      - name: product_key
+        tests: [unique, not_null]
+      - name: margin_tier
+        tests:
+          - accepted_values:
+              values: ['High Margin', 'Medium Margin', 'Low Margin', 'Unknown']
+
+  - name: dim_ingredient
+    columns:
+      - name: ingredient_key
+        tests: [unique, not_null]

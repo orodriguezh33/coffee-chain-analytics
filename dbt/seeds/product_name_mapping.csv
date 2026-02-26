@@ -1,17 +1,88 @@
 pos_product_detail,canonical_product_name,size_code,cost_required,recipe_required,product_group,notes
-Latte Sm,Latte,Sm,true,true,beverage_prepared,size variant
-Latte Rg,Latte,Rg,true,true,beverage_prepared,size variant
-Latte Lg,Latte,Lg,true,true,beverage_prepared,size variant
-Cappuccino Sm,Cappuccino,Sm,true,true,beverage_prepared,size variant
-Cappuccino Rg,Cappuccino,Rg,true,true,beverage_prepared,size variant
-Cappuccino Lg,Cappuccino,Lg,true,true,beverage_prepared,size variant
-Americano Sm,Americano,Sm,true,true,beverage_prepared,size variant
-Americano Rg,Americano,Rg,true,true,beverage_prepared,size variant
+Almond Croissant,Almond Croissant,,true,true,food_prepared,auto-imported from mapping backlog (Add mapping only)
 Americano Lg,Americano,Lg,true,true,beverage_prepared,size variant
-Earl Grey Rg,Earl Grey,Rg,true,true,tea_prepared,add canonical to synthetic catalog
-Earl Grey Lg,Earl Grey,Lg,true,true,tea_prepared,add canonical to synthetic catalog
-Peppermint Rg,Peppermint,Rg,true,true,tea_prepared,add canonical to synthetic catalog
+Americano Rg,Americano,Rg,true,true,beverage_prepared,size variant
+Americano Sm,Americano,Sm,true,true,beverage_prepared,size variant
+Brazilian - Organic,Brazilian - Organic,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+Brazilian Lg,Brazilian,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Brazilian Rg,Brazilian,Rg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Brazilian Sm,Brazilian,Sm,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Cappuccino,Cappuccino,,true,true,beverage_prepared,explicit canonical mapping
+Cappuccino Lg,Cappuccino,Lg,true,true,beverage_prepared,size variant
+Cappuccino Rg,Cappuccino,Rg,true,true,beverage_prepared,size variant
+Cappuccino Sm,Cappuccino,Sm,true,true,beverage_prepared,size variant
+Carmel syrup,Carmel syrup,,true,true,add_on,auto-imported from mapping backlog (Add mapping only)
+Chili Mayan,Chili Mayan,,true,false,retail_packaged,"retail item: cost tracked, no preparation recipe"
+Chocolate Chip Biscotti,Chocolate Chip Biscotti,,true,true,food_prepared,auto-imported from mapping backlog (Add mapping only)
 Chocolate Croissant,Chocolate Croissant,,true,true,bakery_prepared,add recipe and cost
-I Need My Bean! T-shirt,I Need My Bean! T-shirt,,false,false,merchandise,no recipe expected
+Chocolate syrup,Chocolate syrup,,true,true,add_on,auto-imported from mapping backlog (Add mapping only)
+Civet Cat,Civet Cat,,true,false,retail_packaged,"retail item: cost tracked, no preparation recipe"
+Columbian Medium Roast,Columbian Medium Roast,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+Columbian Medium Roast Lg,Columbian Medium Roast,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Columbian Medium Roast Rg,Columbian Medium Roast,Rg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Columbian Medium Roast Sm,Columbian Medium Roast,Sm,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Cranberry Scone,Cranberry Scone,,true,true,food_prepared,auto-imported from mapping backlog (Add mapping only)
+Croissant,Croissant,,true,true,bakery_prepared,explicit canonical mapping
+Dark chocolate,Dark chocolate,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+Dark chocolate Lg,Dark chocolate,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Dark chocolate Rg,Dark chocolate,Rg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Earl Grey,Earl Grey,,true,false,retail_packaged,"retail item: cost tracked, no preparation recipe"
+Earl Grey Lg,Earl Grey,Lg,true,true,tea_prepared,add canonical to synthetic catalog
+Earl Grey Rg,Earl Grey,Rg,true,true,tea_prepared,add canonical to synthetic catalog
+English Breakfast,English Breakfast,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+English Breakfast Lg,English Breakfast,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+English Breakfast Rg,English Breakfast,Rg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Espresso Roast,Espresso Roast,,true,false,retail_packaged,"retail item: cost tracked, no preparation recipe"
+Espresso shot,Espresso shot,,true,true,beverage_prepared,explicit canonical mapping
+Ethiopia,Ethiopia,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+Ethiopia Lg,Ethiopia,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Ethiopia Rg,Ethiopia,Rg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Ethiopia Sm,Ethiopia,Sm,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Ginger Biscotti,Ginger Biscotti,,true,true,food_prepared,auto-imported from mapping backlog (Add mapping only)
+Ginger Scone,Ginger Scone,,true,true,food_prepared,auto-imported from mapping backlog (Add mapping only)
+Guatemalan Sustainably Grown,Guatemalan Sustainably Grown,,true,false,retail_packaged,"retail item: cost tracked, no preparation recipe"
+Hazelnut Biscotti,Hazelnut Biscotti,,true,true,food_prepared,auto-imported from mapping backlog (Add mapping only)
+Hazelnut syrup,Hazelnut syrup,,true,true,add_on,auto-imported from mapping backlog (Add mapping only)
 I Need My Bean! Diner mug,I Need My Bean! Diner mug,,false,false,merchandise,no recipe expected
 I Need My Bean! Latte cup,I Need My Bean! Latte cup,,false,false,merchandise,no recipe expected
+I Need My Bean! T-shirt,I Need My Bean! T-shirt,,false,false,merchandise,no recipe expected
+Jamacian Coffee River,Jamaican Coffee River,,true,false,retail_packaged,"retail item: cost tracked, no preparation recipe"
+Jamaican Coffee River Lg,Jamaican Coffee River,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Jamaican Coffee River Rg,Jamaican Coffee River,Rg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Jamaican Coffee River Sm,Jamaican Coffee River,Sm,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Jumbo Savory Scone,Jumbo Savory Scone,,true,true,food_prepared,auto-imported from mapping backlog (Add mapping only)
+Latte,Latte,,true,true,beverage_prepared,explicit canonical mapping
+Latte Lg,Latte,Lg,true,true,beverage_prepared,size variant
+Latte Rg,Latte,Rg,true,true,beverage_prepared,size variant
+Latte Sm,Latte,Sm,true,true,beverage_prepared,size variant
+Lemon Grass,Lemon Grass,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+Lemon Grass Lg,Lemon Grass,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Lemon Grass Rg,Lemon Grass,Rg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Morning Sunrise Chai,Morning Sunrise Chai,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+Morning Sunrise Chai Lg,Morning Sunrise Chai,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Morning Sunrise Chai Rg,Morning Sunrise Chai,Rg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Oatmeal Scone,Oatmeal Scone,,true,true,food_prepared,auto-imported from mapping backlog (Add mapping only)
+Organic Decaf Blend,Organic Decaf Blend,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+Our Old Time Diner Blend,Our Old Time Diner Blend,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+Our Old Time Diner Blend Lg,Our Old Time Diner Blend,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Our Old Time Diner Blend Rg,Our Old Time Diner Blend,Rg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Our Old Time Diner Blend Sm,Our Old Time Diner Blend,Sm,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Ouro Brasileiro shot,Ouro Brasileiro shot,,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Peppermint,Peppermint,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+Peppermint Lg,Peppermint,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Peppermint Rg,Peppermint,Rg,true,true,tea_prepared,add canonical to synthetic catalog
+Primo Espresso Roast,Primo Espresso Roast,,true,false,retail_packaged,"retail item: cost tracked, no preparation recipe"
+Scottish Cream Scone,Scottish Cream Scone,,true,true,food_prepared,auto-imported from mapping backlog (Add mapping only)
+Serenity Green Tea,Serenity Green Tea,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+Serenity Green Tea Lg,Serenity Green Tea,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Serenity Green Tea Rg,Serenity Green Tea,Rg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Spicy Eye Opener Chai,Spicy Eye Opener Chai,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+Spicy Eye Opener Chai Lg,Spicy Eye Opener Chai,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Spicy Eye Opener Chai Rg,Spicy Eye Opener Chai,Rg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Sugar Free Vanilla syrup,Sugar Free Vanilla syrup,,true,true,add_on,auto-imported from mapping backlog (Add mapping only)
+Sustainably Grown Organic,Sustainably Grown Organic,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+Sustainably Grown Organic Lg,Sustainably Grown Organic,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Sustainably Grown Organic Rg,Sustainably Grown Organic,Rg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Traditional Blend Chai,Traditional Blend Chai,,false,false,unknown,auto-imported from mapping backlog (Add mapping only)
+Traditional Blend Chai Lg,Traditional Blend Chai,Lg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)
+Traditional Blend Chai Rg,Traditional Blend Chai,Rg,true,true,beverage_prepared,auto-imported from mapping backlog (Add mapping only)

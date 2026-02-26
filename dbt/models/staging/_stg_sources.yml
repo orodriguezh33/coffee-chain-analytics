@@ -1,0 +1,25 @@
+version: 2
+
+sources:
+  - name: bronze_pos
+    description: "Datos crudos del POS en S3 Bronze"
+    database: awsdatacatalog
+    schema: coffee_chain
+    tables:
+      - name: bronze_pos_transactions
+        description: "Transacciones del POS - grain: linea de producto"
+
+  - name: bronze_synthetic
+    description: "Datos sinteticos que simulan ERP, WMS, nomina y CRM"
+    database: awsdatacatalog
+    schema: coffee_chain
+    tables:
+      - name: bronze_product_costs
+      - name: bronze_recipes_bom
+      - name: bronze_daily_inventory
+      - name: bronze_staff_shifts
+      - name: bronze_promotions
+
+seeds:
+  - name: product_name_mapping
+    description: "Mapping de nombres del POS a nombre canonico para joins"
