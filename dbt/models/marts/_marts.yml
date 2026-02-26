@@ -75,6 +75,7 @@ models:
           - not_null
           - accepted_values:
               values: [3, 5, 8]
+              quote: false
 
   - name: dim_product
     columns:

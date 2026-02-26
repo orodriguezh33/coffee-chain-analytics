@@ -16,7 +16,16 @@ ATHENA_DB = os.getenv("ATHENA_DATABASE", "coffee_chain")
 ATHENA_RESULTS = os.getenv("ATHENA_RESULTS")
 BUCKET = os.getenv("S3_BUCKET", "coffee-chain-datalake")
 
-SQL_DIR = Path("/app/sql/quality_gates")
+SQL_DIR = Path(
+    os.getenv(
+        "QUALITY_GATES_SQL_DIR",
+        "/app/sql/quality_gates",
+    )
+)
+if not SQL_DIR.exists():
+    alt_sql_dir = Path("/opt/airflow/include/sql/quality_gates")
+    if alt_sql_dir.exists():
+        SQL_DIR = alt_sql_dir
 
 GATES: dict[str, tuple[str, str]] = {
     "01_row_count": ("01_row_count_check.sql", "CRITICAL"),

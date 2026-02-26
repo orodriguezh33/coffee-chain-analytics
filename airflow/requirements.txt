@@ -1,0 +1,5 @@
+apache-airflow-providers-amazon==8.7.1
+apache-airflow-providers-slack==8.3.0
+dbt-core==1.7.4
+dbt-athena-community==1.7.1
+protobuf<5
