@@ -14,6 +14,7 @@ from airflow.utils.trigger_rule import TriggerRule
 
 sys.path.insert(0, "/opt/airflow/ingestion")
 sys.path.insert(0, "/opt/airflow/include/scripts")
+sys.path.insert(0, "/opt/airflow/sql/bi/scripts")
 
 DEFAULT_ARGS = {
     "owner": "data-engineering",
@@ -34,6 +35,7 @@ def _env_common() -> dict[str, str]:
         "ATHENA_DATABASE": os.getenv("ATHENA_DATABASE", "coffee_chain"),
         "ATHENA_WORKGROUP": os.getenv("ATHENA_WORKGROUP", "primary"),
         "ATHENA_RESULTS": os.getenv("ATHENA_RESULTS", ""),
+        "BI_EXPORT_LOCAL_DIR": "/opt/airflow/include/exports/bi_snapshot",
         "DBT_TARGET": os.getenv("DBT_TARGET", "dev"),
         "PATH": "/home/airflow/.local/bin:/usr/local/bin:/usr/bin:/bin",
     }
@@ -41,26 +43,28 @@ def _env_common() -> dict[str, str]:
 
 with DAG(
     dag_id="coffee_chain_daily",
-    description="Daily pipeline: ingest -> QA -> dbt -> QA -> audit log",
+    description="Pipeline diario: ingesta -> QA -> dbt -> QA -> export BI -> auditoría",
     schedule="0 6 * * *",
     start_date=datetime(2023, 1, 1),
     catchup=False,
     default_args=DEFAULT_ARGS,
     max_active_runs=1,
-    tags=["coffee-chain", "daily", "athena"],
+    tags=["coffee-chain", "diario", "athena"],
     doc_md="""
-    ## Coffee Chain Daily Pipeline
+    ## Pipeline Diario Coffee Chain
 
-    Flow: ingest -> upload Bronze -> repair Athena partitions -> quality gates pre -> dbt run -> dbt test -> quality gates post -> audit marker.
-    Redshift is intentionally excluded; pipeline ends in S3 Gold + Athena.
+    Flujo: ingesta -> upload Bronze -> repair partitions -> quality gates pre
+    -> dbt run -> dbt test -> quality gates post -> export BI -> marcador de auditoría.
+    Redshift queda fuera de alcance; el pipeline termina en S3 Gold + Athena.
     """,
 ) as dag:
-    def ingest_pos(**_ctx):
+    def ingest_pos(**ctx):
         from ingest_pos import run_ingest_pos
 
         os.environ["DATA_RAW"] = "/opt/airflow/data/raw"
         os.environ["DATA_BRONZE"] = "/opt/airflow/data/bronze"
-        return run_ingest_pos()
+        os.environ["RUN_DATE"] = ctx["ds"]
+        return run_ingest_pos(run_date=ctx["ds"])
 
     t_ingest_pos = PythonOperator(
         task_id="ingest_pos_to_bronze",
@@ -68,11 +72,12 @@ with DAG(
         doc_md="Process POS CSV into local Bronze partition.",
     )
 
-    def ingest_synthetic(**_ctx):
+    def ingest_synthetic(**ctx):
         from generate_synthetic_data import run_generate_synthetic
 
         os.environ["DATA_BRONZE"] = "/opt/airflow/data/bronze"
-        return run_generate_synthetic()
+        os.environ["RUN_DATE"] = ctx["ds"]
+        return run_generate_synthetic(run_date=ctx["ds"])
 
     t_ingest_synthetic = PythonOperator(
         task_id="ingest_synthetic_sources",
@@ -80,11 +85,12 @@ with DAG(
         doc_md="Generate synthetic ERP/WMS/labor/CRM sources into local Bronze.",
     )
 
-    def upload_bronze(**_ctx):
+    def upload_bronze(**ctx):
         from upload_bronze_to_s3 import upload_bronze_to_s3, verify_s3_upload
 
         os.environ["DATA_BRONZE"] = "/opt/airflow/data/bronze"
-        upload_bronze_to_s3()
+        os.environ["RUN_DATE"] = ctx["ds"]
+        upload_bronze_to_s3(run_date=ctx["ds"], full_refresh=False)
         verify_s3_upload()
 
     t_upload_bronze = PythonOperator(
@@ -118,7 +124,9 @@ with DAG(
             )
             qid = resp["QueryExecutionId"]
             for _ in range(120):
-                state = athena.get_query_execution(QueryExecutionId=qid)["QueryExecution"]["Status"]["State"]
+                state = athena.get_query_execution(
+                    QueryExecutionId=qid
+                )["QueryExecution"]["Status"]["State"]
                 if state == "SUCCEEDED":
                     print(f"OK repaired {table}")
                     break
@@ -182,6 +190,18 @@ with DAG(
         doc_md="Run post-dbt consistency and parity checks.",
     )
 
+    def export_bi_snapshot(**_ctx):
+        from export_powerbi_snapshot import main as run_export
+
+        os.environ.setdefault("BI_EXPORT_LOCAL_DIR", "/opt/airflow/include/exports/bi_snapshot")
+        run_export()
+
+    t_export_bi = PythonOperator(
+        task_id="export_bi_snapshot",
+        python_callable=export_bi_snapshot,
+        doc_md="Exporta snapshot BI desde Athena a CSV para Power BI.",
+    )
+
     def decide_pipeline_result(**_ctx):
         return "pipeline_success"
 
@@ -226,18 +246,28 @@ with DAG(
             except Exception:
                 bucket = None
         if not bucket:
-            print("S3_BUCKET not configured; failure summary not persisted")
+            print("S3_BUCKET no configurado; no se guarda resumen de fallo")
             return
 
         s3 = boto3.client("s3", region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"))
         run_date = ctx["ds"]
+        dag_run = ctx["dag_run"]
+        failed_task_ids = sorted(
+            {
+                ti.task_id
+                for ti in dag_run.get_task_instances()
+                if ti.state in {"failed", "upstream_failed"}
+                and ti.task_id != ctx["task_instance"].task_id
+            }
+        )
         summary = {
             "run_date": run_date,
             "status": "FAILED",
-            "failed_task": ctx["task_instance"].task_id,
+            "failed_task": failed_task_ids[0] if failed_task_ids else "unknown",
+            "failed_tasks": failed_task_ids,
             "completed": datetime.utcnow().isoformat(),
             "dag_run_id": ctx["run_id"],
-            "action": "Check Airflow task logs",
+            "action": "Revisar logs de tareas en Airflow",
         }
         s3.put_object(
             Bucket=bucket,
@@ -245,13 +275,13 @@ with DAG(
             Body=json.dumps(summary, indent=2).encode("utf-8"),
             ContentType="application/json",
         )
-        print(f"Pipeline FAILED at {ctx['task_instance'].task_id}")
+        print(f"Pipeline FALLÓ. Tareas upstream con error: {failed_task_ids or ['desconocida']}")
 
     t_failure = PythonOperator(
         task_id="pipeline_failure",
         python_callable=log_failure,
         trigger_rule=TriggerRule.ONE_FAILED,
-        doc_md="Persist failure summary to S3 when any upstream fails.",
+        doc_md="Guarda resumen de fallo en S3 cuando cualquier upstream falla.",
     )
 
     t_end = EmptyOperator(
@@ -260,7 +290,16 @@ with DAG(
     )
 
     [t_ingest_pos, t_ingest_synthetic] >> t_upload_bronze
-    t_upload_bronze >> t_repair_partitions >> t_quality_pre >> t_dbt_run >> t_dbt_test >> t_quality_post >> t_branch
+    (
+        t_upload_bronze
+        >> t_repair_partitions
+        >> t_quality_pre
+        >> t_dbt_run
+        >> t_dbt_test
+        >> t_quality_post
+        >> t_export_bi
+        >> t_branch
+    )
     t_branch >> t_success >> t_end
 
     # Failure logger watches the main path and still allows the DAG to close via end.
@@ -273,6 +312,7 @@ with DAG(
         t_dbt_run,
         t_dbt_test,
         t_quality_post,
+        t_export_bi,
         t_success,
     ] >> t_failure
     t_failure >> t_end

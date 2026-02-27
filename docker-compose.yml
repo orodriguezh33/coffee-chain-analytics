@@ -23,9 +23,10 @@ x-airflow-common: &airflow-common
   environment:
     <<: *aws-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
-    AIRFLOW__CORE__FERNET_KEY: 'zTGsEOjIbVRJKJAXqJNYuDMBOPnEFfE7nVKMSIH1234='
-    AIRFLOW__WEBSERVER__SECRET_KEY: 'coffee_chain_2024'
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
+      postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD:?AIRFLOW_DB_PASSWORD required}@airflow-db:5432/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:?AIRFLOW_FERNET_KEY required}
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:?AIRFLOW_SECRET_KEY required}
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__LOGGING__LOGGING_LEVEL: 'INFO'
@@ -38,6 +39,7 @@ x-airflow-common: &airflow-common
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/include:/opt/airflow/include
     - ./airflow/requirements.txt:/opt/airflow/requirements.txt
+    - ./sql:/opt/airflow/sql
     - ./dbt:/opt/airflow/dbt
     - ./data:/opt/airflow/data
     - ./ingestion:/opt/airflow/ingestion
@@ -99,7 +101,7 @@ services:
     container_name: coffee_airflow_db
     environment:
       POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD:?AIRFLOW_DB_PASSWORD required}
       POSTGRES_DB: airflow
     volumes:
       - postgres_airflow_data:/var/lib/postgresql/data
@@ -119,7 +121,7 @@ services:
       bash -c "
         pip install --no-cache-dir -r /opt/airflow/requirements.txt --quiet &&
         airflow db migrate &&
-        airflow users create --username admin --password admin --firstname Coffee --lastname Chain --role Admin --email admin@coffeechain.com || true
+        airflow users create --username ${AIRFLOW_ADMIN_USER:?AIRFLOW_ADMIN_USER required} --password ${AIRFLOW_ADMIN_PASSWORD:?AIRFLOW_ADMIN_PASSWORD required} --firstname Coffee --lastname Chain --role Admin --email admin@coffeechain.com || true
       "
     profiles: ["airflow"]
 

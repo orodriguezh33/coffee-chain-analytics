@@ -99,7 +99,7 @@ def create_bronze_tables() -> None:
     print("\n" + "=" * 55)
     print("ATHENA DDL: Creating Bronze tables")
     print("=" * 55)
-    ddl_file = Path(__file__).parent / "create_bronze_tables.sql"
+    ddl_file = Path(__file__).parent.parent / "ddl" / "create_bronze_tables.sql"
     run_ddl_file(ddl_file)
 
 
