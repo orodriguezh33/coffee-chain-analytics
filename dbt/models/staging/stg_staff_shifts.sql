@@ -5,6 +5,11 @@ with source as (
     select * from {{ source('bronze_synthetic', 'bronze_staff_shifts') }}
 ),
 
+latest_snapshot as (
+    select cast(max(ingestion_date) as varchar) as ingestion_date
+    from source
+),
+
 cleaned as (
     select
         cast(shift_date as date) as shift_date,
@@ -20,7 +25,8 @@ cleaned as (
         cast(labor_cost_usd as decimal(10,2)) as labor_cost_usd,
         cast(ingestion_date as varchar) as ingestion_date
     from source
-    where cast(labor_cost_usd as decimal(10,2)) > 0
+    where cast(ingestion_date as varchar) = (select ingestion_date from latest_snapshot)
+      and cast(labor_cost_usd as decimal(10,2)) > 0
       and cast(employees_on_shift as integer) > 0
 )
 

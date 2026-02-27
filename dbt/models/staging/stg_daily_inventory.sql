@@ -5,6 +5,11 @@ with source as (
     select * from {{ source('bronze_synthetic', 'bronze_daily_inventory') }}
 ),
 
+latest_snapshot as (
+    select cast(max(ingestion_date) as varchar) as ingestion_date
+    from source
+),
+
 cleaned as (
     select
         cast(inventory_date as date) as inventory_date,
@@ -17,7 +22,8 @@ cleaned as (
         cast(closing_stock as decimal(12,2)) as closing_stock,
         cast(ingestion_date as varchar) as ingestion_date
     from source
-    where inventory_date is not null
+    where cast(ingestion_date as varchar) = (select ingestion_date from latest_snapshot)
+      and inventory_date is not null
       and cast(closing_stock as decimal(12,2)) >= 0
 )
 

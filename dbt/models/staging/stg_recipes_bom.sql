@@ -5,6 +5,11 @@ with source as (
     select * from {{ source('bronze_synthetic', 'bronze_recipes_bom') }}
 ),
 
+latest_snapshot as (
+    select cast(max(ingestion_date) as varchar) as ingestion_date
+    from source
+),
+
 cleaned as (
     select
         trim(product_name) as product_name,
@@ -15,7 +20,8 @@ cleaned as (
         cast(last_updated as date) as last_updated,
         cast(ingestion_date as varchar) as ingestion_date
     from source
-    where cast(qty_required_per_unit as decimal(10,4)) > 0
+    where cast(ingestion_date as varchar) = (select ingestion_date from latest_snapshot)
+      and cast(qty_required_per_unit as decimal(10,4)) > 0
 )
 
 select * from cleaned

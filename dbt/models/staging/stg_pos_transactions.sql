@@ -6,6 +6,11 @@ with source as (
     select * from {{ source('bronze_pos', 'bronze_pos_transactions') }}
 ),
 
+latest_snapshot as (
+    select cast(max(ingestion_date) as varchar) as ingestion_date
+    from source
+),
+
 mapping as (
     select
         trim(pos_product_detail) as pos_product_detail,
@@ -34,7 +39,8 @@ typed as (
         trim(product_detail) as product_name_raw,
         cast(ingestion_date as varchar) as ingestion_date
     from source
-    where transaction_id is not null
+    where cast(ingestion_date as varchar) = (select ingestion_date from latest_snapshot)
+      and transaction_id is not null
       and transaction_date is not null
       and transaction_qty is not null
       and unit_price is not null

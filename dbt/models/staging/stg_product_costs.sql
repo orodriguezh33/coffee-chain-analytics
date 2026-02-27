@@ -5,6 +5,11 @@ with source as (
     select * from {{ source('bronze_synthetic', 'bronze_product_costs') }}
 ),
 
+latest_snapshot as (
+    select cast(max(ingestion_date) as varchar) as ingestion_date
+    from source
+),
+
 cleaned as (
     select
         trim(product_name) as product_name,
@@ -16,8 +21,9 @@ cleaned as (
         cast(valid_to as date) as valid_to,
         trim(source_system) as source_system,
         cast(ingestion_date as varchar) as ingestion_date
-    from {{ source('bronze_synthetic', 'bronze_product_costs') }}
-    where cast(unit_cost as decimal(10,4)) > 0
+    from source
+    where cast(ingestion_date as varchar) = (select ingestion_date from latest_snapshot)
+      and cast(unit_cost as decimal(10,4)) > 0
       and cast(unit_price_std as decimal(10,2)) > 0
       and cast(unit_cost as decimal(10,4)) <= cast(unit_price_std as decimal(10,2))
 )
