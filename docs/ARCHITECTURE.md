@@ -1,50 +1,50 @@
-# ARCHITECTURE
+# ARQUITECTURA
 
-## End-to-end flow
+## Flujo end-to-end
 
 ```
-POS CSV + synthetic sources
+POS CSV + fuentes sintéticas
         |
         v
-Python ingestion scripts
+Scripts de ingesta en Python
         |
         v
-S3 Bronze (raw CSV, ingestion_date partitions)
+S3 Bronze (CSV crudo, particiones por ingestion_date)
         |
         v
-Athena external tables (coffee_chain.*)
+Tablas externas Athena (coffee_chain.*)
         |
         v
 dbt (Athena adapter)
-  - staging (silver views)
-  - intermediate (silver views)
-  - marts (gold tables)
+  - staging (views silver)
+  - intermediate (views silver)
+  - marts (tablas gold)
         |
         v
-Athena Gold schema (gold.*)
+Esquema Gold en Athena (gold.*)
         |
         v
-Power BI dashboards
+Dashboards en Power BI
 ```
 
-## Orchestration
-Airflow DAG (`coffee_chain_daily`) executes:
-1. POS ingestion
-2. Synthetic ingestion
-3. Bronze upload to S3
-4. Athena partition repair
+## Orquestación
+El DAG de Airflow (`coffee_chain_daily`) ejecuta:
+1. Ingesta POS
+2. Ingesta sintética
+3. Carga Bronze a S3
+4. Repair de particiones en Athena
 5. Quality gates pre-dbt
 6. dbt run
 7. dbt test
 8. Quality gates post-dbt
-9. Success/failure audit marker in S3
+9. Marcador de éxito/fallo en S3
 
-## Data quality
-Athena quality gates run with severity levels:
-- CRITICAL: stop pipeline
-- WARNING: continue with alert context
-- INFO: diagnostic only
+## Calidad de datos
+Los quality gates en Athena usan niveles de severidad:
+- CRITICAL: detiene el pipeline
+- WARNING: continúa con alerta
+- INFO: diagnóstico informativo
 
-## Serving decision
-Current production-like portfolio scope uses Athena + dbt Gold as serving layer.
-Redshift is not required for this repository to deliver decision-ready BI.
+## Capa de consumo
+El alcance actual del portafolio usa Athena + dbt Gold como capa de consumo.
+Redshift no es necesario en este repositorio para entregar BI utilizable para decisión.

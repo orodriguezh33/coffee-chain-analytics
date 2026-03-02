@@ -66,6 +66,7 @@ Marts principales implementados en el esquema Gold de dbt:
 ```
 coffee-chain-analytics/
 ├── ingestion/
+├── scripts/
 ├── dbt/
 ├── airflow/
 ├── sql/
@@ -78,8 +79,20 @@ coffee-chain-analytics/
 - Arquitectura: `docs/ARCHITECTURE.md`
 - Diccionario de datos: `docs/DATA_DICTIONARY.md`
 - Decisiones de diseño: `docs/DECISIONS.md`
-- Capa de decisión BI: `portfolio/dashboards/dashboard_descriptions/bi_decision_layer.md`
-- Material de entrevista: `portfolio/interview/`
+- Capa BI y dashboards: `portfolio/BI_DASHBOARDS.md`
+- Material de entrevista: `portfolio/INTERVIEW_GUIDE.md`
+
+## Cómo correr el proyecto
+El proyecto incluye un CLI simple en la raíz para ejecutar los pasos principales.
+
+```bash
+python main.py --help
+python main.py ingest-local --run-date 2023-06-15
+python main.py upload-bronze --run-date 2023-06-15
+python main.py athena-ddl
+python main.py quality-gates completeness integrity --run-date 2023-06-15
+python main.py export-bi
+```
 
 ## Ejecución local (Airflow)
 
@@ -97,9 +110,10 @@ Si no puedes conectar Power BI directo a Athena (por ejemplo, VM en Parallels), 
 ```bash
 docker compose --env-file .env run --rm \
   -v $(pwd)/sql:/app/sql \
+  -v $(pwd)/scripts:/app/scripts \
   -v $(pwd)/exports:/app/exports \
   ingestion \
-  python /app/sql/bi/scripts/export_powerbi_snapshot.py
+  python /app/scripts/bi/export_powerbi_snapshot.py
 ```
 
 Salida esperada:
@@ -107,4 +121,11 @@ Salida esperada:
 - `exports/bi_snapshot/<snapshot_id>/manifest.json`
 
 ## Sobre el proyecto
-Construido para demostrar ingeniería de datos aplicada a operación retail real: convertir datos multi-fuente en decisiones diarias de tienda.
+El objetivo del repositorio es mostrar un flujo completo y entendible:
+- ingesta
+- validación
+- transformación
+- orquestación
+- consumo en BI
+
+La prioridad fue dejar un proyecto claro, reproducible y defendible para un primer portafolio serio de datos.

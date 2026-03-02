@@ -12,10 +12,9 @@ from __future__ import annotations
 
 import csv
 import os
-import time
 from pathlib import Path
 
-import boto3
+from scripts.shared.athena_runner import iter_result_rows, run_query
 
 REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 ATHENA_DB = os.getenv("ATHENA_DATABASE", "coffee_chain")
@@ -92,53 +91,16 @@ where b.has_mapping = 'false'
 order by b.transactions desc, b.pos_product_detail
 """
 
-
-def run_athena_query(query: str) -> str:
-    athena = boto3.client("athena", region_name=REGION)
-    resp = athena.start_query_execution(
-        QueryString=query,
-        QueryExecutionContext={"Database": ATHENA_DB},
-        WorkGroup=ATHENA_WORKGROUP,
-        ResultConfiguration={"OutputLocation": ATHENA_RESULTS},
-    )
-    qid = resp["QueryExecutionId"]
-
-    for _ in range(180):
-        status = athena.get_query_execution(QueryExecutionId=qid)["QueryExecution"]["Status"]
-        state = status["State"]
-        if state == "SUCCEEDED":
-            return qid
-        if state in {"FAILED", "CANCELLED"}:
-            raise RuntimeError(f"Athena query {state}: {status.get('StateChangeReason', '')}")
-        time.sleep(1)
-    raise TimeoutError("Athena query timed out")
-
-
 def fetch_all_rows(qid: str) -> tuple[list[str], list[list[str]]]:
-    athena = boto3.client("athena", region_name=REGION)
-    headers: list[str] | None = None
+    rows = list(iter_result_rows(qid, include_header=True))
+    if not rows:
+        return [], []
+    headers = rows[0]
     data_rows: list[list[str]] = []
-    next_token = None
-    first_page = True
-    while True:
-        kwargs = {"QueryExecutionId": qid}
-        if next_token:
-            kwargs["NextToken"] = next_token
-        resp = athena.get_query_results(**kwargs)
-        rows = resp["ResultSet"]["Rows"]
-        if first_page:
-            headers = [c.get("VarCharValue", "") for c in rows[0]["Data"]]
-            rows = rows[1:]
-            first_page = False
-        for row in rows:
-            values = [c.get("VarCharValue", "") for c in row.get("Data", [])]
-            if len(values) < len(headers):
-                values.extend([""] * (len(headers) - len(values)))
-            data_rows.append(values)
-        next_token = resp.get("NextToken")
-        if not next_token:
-            break
-    return headers or [], data_rows
+    for row in rows[1:]:
+        padded = row + [""] * max(0, len(headers) - len(row))
+        data_rows.append(padded[: len(headers)])
+    return headers, data_rows
 
 
 def write_csv(headers: list[str], rows: list[list[str]]) -> None:
@@ -172,7 +134,7 @@ def main() -> int:
     print(f"Workgroup: {ATHENA_WORKGROUP}")
     print(f"Output CSV: {OUTPUT_PATH}")
 
-    qid = run_athena_query(QUERY)
+    qid = run_query(QUERY, description="generate mapping backlog", database=ATHENA_DB, timeout_seconds=180)
     print(f"QueryExecutionId: {qid}")
     headers, rows = fetch_all_rows(qid)
     write_csv(headers, rows)

@@ -1,5 +1,3 @@
-version: '3.8'
-
 networks:
   coffee_chain_network:
     driver: bridge
@@ -35,11 +33,13 @@ x-airflow-common: &airflow-common
     AIRFLOW_VAR_ATHENA_RESULTS: ${ATHENA_RESULTS}
     AIRFLOW_VAR_AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
     DBT_TARGET: dev
+    PYTHONPATH: /opt/airflow
   volumes:
     - ./airflow/dags:/opt/airflow/dags
-    - ./airflow/include:/opt/airflow/include
     - ./airflow/requirements.txt:/opt/airflow/requirements.txt
     - ./sql:/opt/airflow/sql
+    - ./scripts:/opt/airflow/scripts
+    - ./exports:/opt/airflow/exports
     - ./dbt:/opt/airflow/dbt
     - ./data:/opt/airflow/data
     - ./ingestion:/opt/airflow/ingestion
@@ -58,10 +58,12 @@ services:
     container_name: coffee_ingestion
     environment:
       <<: *aws-env
+      PYTHONPATH: /app
     volumes:
       - ./ingestion:/app/ingestion
       - ./data:/app/data
-      - ./airflow/include:/app
+      - ./scripts:/app/scripts
+      - ./sql:/app/sql
     networks:
       - coffee_chain_network
     profiles: ["ingestion"]
@@ -74,6 +76,7 @@ services:
     environment:
       <<: *aws-env
       DBT_TARGET: ${DBT_TARGET:-dev}
+      PYTHONPATH: /app
     volumes:
       - ./dbt:/app/dbt
       - dbt_target:/app/dbt/target
@@ -88,10 +91,11 @@ services:
     container_name: coffee_quality
     environment:
       <<: *aws-env
+      PYTHONPATH: /app
     volumes:
-      - ./airflow/include/scripts:/app/scripts
-      - ./airflow/include/sql:/app/sql
-    command: python /app/scripts/run_quality_gates.py
+      - ./scripts:/app/scripts
+      - ./sql:/app/sql
+    command: python /app/scripts/quality/run_quality_gates.py
     networks:
       - coffee_chain_network
     profiles: ["quality"]

@@ -1,64 +1,64 @@
-# DATA_DICTIONARY
+# Diccionario de Datos
 
-## Gold facts
+## Tablas de hechos (Gold)
 
 ### gold.fct_sales
-- Grain: one product line per transaction
-- Key columns:
-  - `sales_key` (surrogate)
+- Grano: una línea de producto por transacción
+- Columnas clave:
+  - `sales_key` (surrogate key)
   - `transaction_id`
   - `date_key`, `store_key`, `product_key`
   - `transaction_qty`, `unit_price`, `gross_revenue`
   - `unit_cost`, `cogs_amount`, `gross_profit`, `gross_margin_pct`
 
 ### gold.fct_waste
-- Grain: ingredient x store x day
-- Key columns:
-  - `waste_key` (surrogate)
+- Grano: ingrediente x tienda x día
+- Columnas clave:
+  - `waste_key` (surrogate key)
   - `date_key`, `store_key`
   - `ingredient_name`, `unit_of_measure`
   - `theoretical_consumption`, `actual_consumed`
   - `waste_qty`, `waste_amount_usd`, `waste_rate_pct`
 
 ### gold.fct_labor
-- Grain: store x day
-- Key columns:
-  - `labor_key` (surrogate)
+- Grano: tienda x día
+- Columnas clave:
+  - `labor_key` (surrogate key)
   - `date_key`, `store_key`
   - `total_labor_cost`, `total_hours_worked`, `daily_revenue`
   - `labor_cost_pct`, `labor_status`
 
 ### gold.fct_inventory_snapshot
-- Grain: ingredient x store x day
-- Key columns:
-  - `snapshot_key` (surrogate)
+- Grano: ingrediente x tienda x día
+- Columnas clave:
+  - `snapshot_key` (surrogate key)
   - `date_key`, `store_key`
   - `ingredient_name`, `opening_stock`, `closing_stock`, `units_received`
   - `days_of_inventory_remaining`, `stockout_risk_flag`
 
-## Gold dimensions
+## Dimensiones (Gold)
 
 ### gold.dim_date
-- Grain: one row per calendar date
-- Columns: `date_key`, `full_date`, calendar attributes (`year`, `month_num`, `week_num`, etc.)
+- Grano: una fila por fecha de calendario
+- Columnas: `date_key`, `full_date`, atributos de calendario (`year`, `month_num`, `week_num`, etc.)
 
 ### gold.dim_store
-- Grain: one row per store
-- Columns: `store_key`, `store_id`, `store_location`, `store_name`, `city`, `borough`
+- Grano: una fila por tienda
+- Columnas: `store_key`, `store_id`, `store_location`, `store_name`, `city`, `borough`
 
 ### gold.dim_product
-- Grain: one row per canonical product
-- Columns: `product_key`, `product_name`, `product_category`, `unit_price_std`, `unit_cost`, `cogs_pct`, `margin_tier`
+- Grano: una fila por producto canónico
+- Columnas: `product_key`, `product_name`, `product_category`, `unit_price_std`, `unit_cost`, `cogs_pct`, `margin_tier`
 
 ### gold.dim_ingredient
-- Grain: one row per ingredient
-- Columns: `ingredient_key`, `ingredient_name`, `unit_of_measure`, `cost_per_unit`
+- Grano: una fila por ingrediente
+- Columnas: `ingredient_key`, `ingredient_name`, `unit_of_measure`, `cost_per_unit`
 
-## Mapping seed
+## Seed de mapeo
 
 ### silver.product_name_mapping (dbt seed)
-- Purpose: canonicalize POS product names and define business flags
-- Core fields:
+- Propósito: estandarizar nombres de producto del POS y definir banderas de negocio
+- Campos principales:
   - `pos_product_detail`
   - `canonical_product_name`
   - `cost_required`

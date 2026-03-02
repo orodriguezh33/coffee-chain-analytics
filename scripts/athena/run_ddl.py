@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import os
-import time
 from pathlib import Path
 
-import boto3
+from scripts.shared.athena_runner import fetch_scalar, get_athena_client, run_query
 
 REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 ATHENA_DB = os.getenv("ATHENA_DATABASE", "coffee_chain")
@@ -15,36 +14,17 @@ BUCKET = os.getenv("S3_BUCKET", "coffee-chain-datalake")
 ATHENA_WORKGROUP = os.getenv("ATHENA_WORKGROUP", "primary")
 
 
-def run_athena_query(query: str, description: str = "", wait: bool = True) -> str:
-    """Execute an Athena query and optionally wait for completion."""
-    athena = boto3.client("athena", region_name=REGION)
-    resp = athena.start_query_execution(
-        QueryString=query,
-        QueryExecutionContext={"Database": ATHENA_DB},
-        WorkGroup=ATHENA_WORKGROUP,
-        ResultConfiguration={"OutputLocation": ATHENA_RESULTS},
+def run_athena_query(query: str, description: str = "") -> str:
+    """Execute an Athena query and wait for completion."""
+    exec_id = run_query(
+        query,
+        description=description,
+        database=ATHENA_DB,
+        timeout_seconds=120,
     )
-    exec_id = resp["QueryExecutionId"]
-    if not wait:
-        return exec_id
-
-    for _ in range(120):
-        status_resp = athena.get_query_execution(QueryExecutionId=exec_id)
-        status = status_resp["QueryExecution"]["Status"]
-        state = status["State"]
-        if state == "SUCCEEDED":
-            if description:
-                print(f"  ✓ {description}")
-            return exec_id
-        if state in ("FAILED", "CANCELLED"):
-            reason = status.get("StateChangeReason", "Unknown error")
-            raise RuntimeError(
-                f"Query failed: {description or exec_id}\n"
-                f"Reason: {reason}\n"
-                f"Query: {query[:400]}"
-            )
-        time.sleep(1)
-    raise TimeoutError(f"Query timed out after 120s: {description or exec_id}")
+    if description:
+        print(f"  ✓ {description}")
+    return exec_id
 
 
 def _split_sql_statements(sql_content: str) -> list[str]:
@@ -99,7 +79,7 @@ def create_bronze_tables() -> None:
     print("\n" + "=" * 55)
     print("ATHENA DDL: Creating Bronze tables")
     print("=" * 55)
-    ddl_file = Path(__file__).parent.parent / "ddl" / "create_bronze_tables.sql"
+    ddl_file = Path(__file__).parents[2] / "sql" / "athena" / "ddl" / "create_bronze_tables.sql"
     run_ddl_file(ddl_file)
 
 
@@ -123,14 +103,6 @@ def repair_partitions() -> None:
     )
 
 
-def _get_scalar_query_result(athena, exec_id: str) -> str:
-    results = athena.get_query_results(QueryExecutionId=exec_id)
-    rows = results["ResultSet"]["Rows"]
-    if len(rows) < 2:
-        return "0"
-    return rows[1]["Data"][0].get("VarCharValue", "0")
-
-
 def verify_tables() -> None:
     print("\n-- Verifying table contents -----------------")
     checks = [
@@ -141,10 +113,10 @@ def verify_tables() -> None:
         ("bronze_staff_shifts", "SELECT COUNT(*) FROM coffee_chain.bronze_staff_shifts"),
         ("bronze_promotions", "SELECT COUNT(*) FROM coffee_chain.bronze_promotions"),
     ]
-    athena = boto3.client("athena", region_name=REGION)
+    athena = get_athena_client()
     for table_name, query in checks:
-        exec_id = run_athena_query(query, wait=True)
-        count = _get_scalar_query_result(athena, exec_id)
+        exec_id = run_athena_query(query)
+        count = fetch_scalar(exec_id)
         print(f"  ✓ {table_name:<30} {int(count):>10,} rows")
 
 

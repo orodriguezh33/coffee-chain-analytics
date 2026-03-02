@@ -2,7 +2,7 @@
 Exporta un snapshot BI desde Athena a archivos CSV locales.
 
 Uso recomendado:
-    python /app/sql/bi/scripts/export_powerbi_snapshot.py
+    python /app/scripts/bi/export_powerbi_snapshot.py
 
 Salida:
     exports/bi_snapshot/<snapshot_id>/*.csv
@@ -21,6 +21,8 @@ from pathlib import Path
 from typing import Iterable
 
 import boto3
+
+from scripts.shared.athena_runner import iter_result_rows, run_query
 
 REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 ATHENA_DATABASE = os.getenv("ATHENA_DATABASE", "coffee_chain")
@@ -45,11 +47,6 @@ class ExportResult:
     query_execution_id: str
     rows: int
     output_file: str
-
-
-def _athena_client():
-    return boto3.client("athena", region_name=REGION)
-
 
 def _resolve_bi_database() -> str:
     if BI_DATABASE:
@@ -76,72 +73,33 @@ def _resolve_bi_database() -> str:
 def _run_query(query: str, database_name: str) -> str:
     if not ATHENA_RESULTS:
         raise ValueError("ATHENA_RESULTS no esta definido en variables de entorno.")
-
-    athena = _athena_client()
     retryable_markers = ("TABLE_NOT_FOUND", "SCHEMA_NOT_FOUND")
 
     for attempt in range(1, 6):
-        response = athena.start_query_execution(
-            QueryString=query,
-            QueryExecutionContext={"Database": database_name},
-            ResultConfiguration={"OutputLocation": ATHENA_RESULTS},
-        )
-        query_id = response["QueryExecutionId"]
-
-        for _ in range(300):
-            status = athena.get_query_execution(QueryExecutionId=query_id)
-            state = status["QueryExecution"]["Status"]["State"]
-            if state == "SUCCEEDED":
-                return query_id
-            if state in {"FAILED", "CANCELLED"}:
-                reason = status["QueryExecution"]["Status"].get(
-                    "StateChangeReason", "Error no identificado"
+        try:
+            return run_query(
+                query,
+                description=f"export {database_name}",
+                database=database_name,
+                timeout_seconds=300,
+            )
+        except RuntimeError as exc:
+            reason = str(exc)
+            if any(marker in reason for marker in retryable_markers) and attempt < 5:
+                wait_seconds = attempt * 4
+                print(
+                    f"    Reintento {attempt}/5 por error transitorio "
+                    f"({reason[:80]}...). Esperando {wait_seconds}s"
                 )
-                if (
-                    any(marker in reason for marker in retryable_markers)
-                    and attempt < 5
-                ):
-                    wait_seconds = attempt * 4
-                    print(
-                        f"    Reintento {attempt}/5 por error transitorio "
-                        f"({reason[:80]}...). Esperando {wait_seconds}s"
-                    )
-                    time.sleep(wait_seconds)
-                    break
-                raise RuntimeError(f"Query fallo ({query_id}): {reason}")
-            time.sleep(1)
-        else:
-            raise TimeoutError(f"Query timeout ({query_id})")
+                time.sleep(wait_seconds)
+                continue
+            raise
 
     raise RuntimeError("Query fallo tras 5 intentos.")
 
 
 def _iterate_rows(query_execution_id: str) -> Iterable[list[str]]:
-    athena = _athena_client()
-    next_token = None
-    first_page = True
-
-    while True:
-        params = {"QueryExecutionId": query_execution_id}
-        if next_token:
-            params["NextToken"] = next_token
-
-        response = athena.get_query_results(**params)
-        rows = response["ResultSet"]["Rows"]
-
-        if first_page:
-            first_page = False
-            for row in rows:
-                values = [col.get("VarCharValue", "") for col in row["Data"]]
-                yield values
-        else:
-            for row in rows:
-                values = [col.get("VarCharValue", "") for col in row["Data"]]
-                yield values
-
-        next_token = response.get("NextToken")
-        if not next_token:
-            break
+    yield from iter_result_rows(query_execution_id, include_header=True)
 
 
 def _export_table(table: str, output_dir: Path, database_name: str) -> ExportResult:
@@ -158,7 +116,6 @@ def _export_table(table: str, output_dir: Path, database_name: str) -> ExportRes
             writer.writerow(row)
             rows_written += 1
 
-    # El primer row es el header de Athena.
     data_rows = max(rows_written - 1, 0)
     print(f"    OK -> {output_file} ({data_rows:,} filas)")
 

@@ -1,29 +1,8 @@
-# Estructura de `sql/`
+`sql/` contiene solo archivos SQL declarativos del proyecto.
 
-Esta carpeta se organiza por dominio para mantener separado:
-- SQL declarativo (DDL / validaciones)
-- scripts Python que ejecutan o exportan datos
+Estructura:
 
-## Estructura actual
+- `athena/ddl/`: DDL y validaciones SQL de Athena.
+- `quality_gates/`: reglas SQL de calidad consumidas por scripts y Airflow.
 
-```text
-sql/
-├── athena/
-│   ├── ddl/
-│   │   ├── create_bronze_tables.sql
-│   │   └── validate_joins.sql
-│   └── scripts/
-│       ├── run_ddl.py
-│       └── generate_mapping_backlog.py
-├── bi/
-│   └── scripts/
-│       └── export_powerbi_snapshot.py
-└── README.md
-```
-
-## Convención
-
-- `ddl/`: solo archivos `.sql`.
-- `scripts/`: solo archivos `.py`.
-- Evitar mezclar SQL y Python en el mismo subdirectorio.
-- No versionar `__pycache__/` ni `.DS_Store`.
+Los scripts ejecutables viven en `/Users/oscar/programacion/coffee-chain-analytics/scripts`.

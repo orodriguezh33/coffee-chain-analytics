@@ -20,7 +20,11 @@ def _safe_err(prefix: str, e: Exception) -> bool:
         print(f"  ✗ {prefix}: Missing or incomplete AWS credentials")
         return False
     if isinstance(e, ClientError):
-        print(f"  ✗ {prefix}: {e.response.get('Error', {}).get('Code')} — {e.response.get('Error', {}).get('Message')}")
+        print(
+            f"  ✗ {prefix}: "
+            f"{e.response.get('Error', {}).get('Code')} — "
+            f"{e.response.get('Error', {}).get('Message')}"
+        )
         return False
     print(f"  ✗ {prefix}: {e}")
     return False

@@ -26,9 +26,13 @@ dbt/dbt_packages/
 # Airflow
 airflow/logs/
 airflow/.astro/
+airflow/include/exports/
 
 # Docker
 *.log
+
+# Exportaciones locales
+exports/
 
 # macOS
 .DS_Store

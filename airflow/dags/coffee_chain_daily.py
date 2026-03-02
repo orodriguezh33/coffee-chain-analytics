@@ -1,20 +1,25 @@
 from __future__ import annotations
 
-import json
-import os
-import sys
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.models import Variable
 from airflow.operators.bash import BashOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.utils.trigger_rule import TriggerRule
 
-sys.path.insert(0, "/opt/airflow/ingestion")
-sys.path.insert(0, "/opt/airflow/include/scripts")
-sys.path.insert(0, "/opt/airflow/sql/bi/scripts")
+from scripts.pipeline.airflow_env import build_airflow_env
+from scripts.pipeline.tasks import (
+    export_bi_snapshot_task,
+    ingest_pos_task,
+    ingest_synthetic_task,
+    pipeline_failure_task,
+    pipeline_success_task,
+    quality_gates_post_task,
+    quality_gates_pre_task,
+    repair_partitions_task,
+    upload_bronze_task,
+)
 
 DEFAULT_ARGS = {
     "owner": "data-engineering",
@@ -24,21 +29,6 @@ DEFAULT_ARGS = {
     "retry_exponential_backoff": True,
     "execution_timeout": timedelta(minutes=30),
 }
-
-
-def _env_common() -> dict[str, str]:
-    return {
-        "AWS_DEFAULT_REGION": os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
-        "AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID", ""),
-        "AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY", ""),
-        "S3_BUCKET": os.getenv("S3_BUCKET", ""),
-        "ATHENA_DATABASE": os.getenv("ATHENA_DATABASE", "coffee_chain"),
-        "ATHENA_WORKGROUP": os.getenv("ATHENA_WORKGROUP", "primary"),
-        "ATHENA_RESULTS": os.getenv("ATHENA_RESULTS", ""),
-        "BI_EXPORT_LOCAL_DIR": "/opt/airflow/include/exports/bi_snapshot",
-        "DBT_TARGET": os.getenv("DBT_TARGET", "dev"),
-        "PATH": "/home/airflow/.local/bin:/usr/local/bin:/usr/bin:/bin",
-    }
 
 
 with DAG(
@@ -58,98 +48,33 @@ with DAG(
     Redshift queda fuera de alcance; el pipeline termina en S3 Gold + Athena.
     """,
 ) as dag:
-    def ingest_pos(**ctx):
-        from ingest_pos import run_ingest_pos
-
-        os.environ["DATA_RAW"] = "/opt/airflow/data/raw"
-        os.environ["DATA_BRONZE"] = "/opt/airflow/data/bronze"
-        os.environ["RUN_DATE"] = ctx["ds"]
-        return run_ingest_pos(run_date=ctx["ds"])
-
     t_ingest_pos = PythonOperator(
         task_id="ingest_pos_to_bronze",
-        python_callable=ingest_pos,
+        python_callable=ingest_pos_task,
         doc_md="Process POS CSV into local Bronze partition.",
     )
 
-    def ingest_synthetic(**ctx):
-        from generate_synthetic_data import run_generate_synthetic
-
-        os.environ["DATA_BRONZE"] = "/opt/airflow/data/bronze"
-        os.environ["RUN_DATE"] = ctx["ds"]
-        return run_generate_synthetic(run_date=ctx["ds"])
-
     t_ingest_synthetic = PythonOperator(
         task_id="ingest_synthetic_sources",
-        python_callable=ingest_synthetic,
+        python_callable=ingest_synthetic_task,
         doc_md="Generate synthetic ERP/WMS/labor/CRM sources into local Bronze.",
     )
 
-    def upload_bronze(**ctx):
-        from upload_bronze_to_s3 import upload_bronze_to_s3, verify_s3_upload
-
-        os.environ["DATA_BRONZE"] = "/opt/airflow/data/bronze"
-        os.environ["RUN_DATE"] = ctx["ds"]
-        upload_bronze_to_s3(run_date=ctx["ds"], full_refresh=False)
-        verify_s3_upload()
-
     t_upload_bronze = PythonOperator(
         task_id="upload_bronze_to_s3",
-        python_callable=upload_bronze,
+        python_callable=upload_bronze_task,
         doc_md="Upload local Bronze files to S3 Bronze paths.",
     )
 
-    def repair_partitions(**_ctx):
-        import time
-
-        import boto3
-
-        athena = boto3.client("athena", region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"))
-        results = os.getenv("ATHENA_RESULTS")
-        workgroup = os.getenv("ATHENA_WORKGROUP", "primary")
-
-        queries = [
-            ("bronze_pos_transactions", "MSCK REPAIR TABLE coffee_chain.bronze_pos_transactions"),
-            ("bronze_product_costs", "MSCK REPAIR TABLE coffee_chain.bronze_product_costs"),
-            ("bronze_recipes_bom", "MSCK REPAIR TABLE coffee_chain.bronze_recipes_bom"),
-            ("bronze_daily_inventory", "MSCK REPAIR TABLE coffee_chain.bronze_daily_inventory"),
-            ("bronze_staff_shifts", "MSCK REPAIR TABLE coffee_chain.bronze_staff_shifts"),
-        ]
-
-        for table, query in queries:
-            resp = athena.start_query_execution(
-                QueryString=query,
-                WorkGroup=workgroup,
-                ResultConfiguration={"OutputLocation": results},
-            )
-            qid = resp["QueryExecutionId"]
-            for _ in range(120):
-                state = athena.get_query_execution(
-                    QueryExecutionId=qid
-                )["QueryExecution"]["Status"]["State"]
-                if state == "SUCCEEDED":
-                    print(f"OK repaired {table}")
-                    break
-                if state in {"FAILED", "CANCELLED"}:
-                    raise RuntimeError(f"MSCK REPAIR failed for {table}: {state}")
-                time.sleep(1)
-            else:
-                raise TimeoutError(f"MSCK REPAIR timed out for {table}")
-
     t_repair_partitions = PythonOperator(
         task_id="repair_athena_partitions",
-        python_callable=repair_partitions,
+        python_callable=repair_partitions_task,
         doc_md="Register new Bronze partitions in Athena.",
     )
 
-    def quality_gates_pre(**ctx):
-        from run_quality_gates import run_all_gates
-
-        return run_all_gates(blocks=["completeness", "integrity"], run_date=ctx["ds"])
-
     t_quality_pre = PythonOperator(
         task_id="quality_gates_pre_dbt",
-        python_callable=quality_gates_pre,
+        python_callable=quality_gates_pre_task,
         doc_md="Run pre-dbt completeness and integrity checks.",
     )
 
@@ -162,7 +87,7 @@ with DAG(
         dbt deps --profiles-dir . --target dev --quiet
         dbt run --profiles-dir . --target dev --no-use-colors
         """,
-        env=_env_common(),
+        env=build_airflow_env(),
         doc_md="Build Silver and Gold models in Athena.",
     )
 
@@ -175,30 +100,19 @@ with DAG(
         dbt deps --profiles-dir . --target dev --quiet
         dbt test --profiles-dir . --target dev --no-use-colors
         """,
-        env=_env_common(),
+        env=build_airflow_env(),
         doc_md="Run dbt tests after model build.",
     )
 
-    def quality_gates_post(**ctx):
-        from run_quality_gates import run_all_gates
-
-        return run_all_gates(blocks=["consistency", "parity"], run_date=ctx["ds"])
-
     t_quality_post = PythonOperator(
         task_id="quality_gates_post_dbt",
-        python_callable=quality_gates_post,
+        python_callable=quality_gates_post_task,
         doc_md="Run post-dbt consistency and parity checks.",
     )
 
-    def export_bi_snapshot(**_ctx):
-        from export_powerbi_snapshot import main as run_export
-
-        os.environ.setdefault("BI_EXPORT_LOCAL_DIR", "/opt/airflow/include/exports/bi_snapshot")
-        run_export()
-
     t_export_bi = PythonOperator(
         task_id="export_bi_snapshot",
-        python_callable=export_bi_snapshot,
+        python_callable=export_bi_snapshot_task,
         doc_md="Exporta snapshot BI desde Athena a CSV para Power BI.",
     )
 
@@ -210,76 +124,15 @@ with DAG(
         python_callable=decide_pipeline_result,
     )
 
-    def log_success(**ctx):
-        import boto3
-
-        bucket = os.getenv("S3_BUCKET") or Variable.get("S3_BUCKET")
-        s3 = boto3.client("s3", region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"))
-        run_date = ctx["ds"]
-        summary = {
-            "run_date": run_date,
-            "status": "SUCCESS",
-            "completed": datetime.utcnow().isoformat(),
-            "dag_run_id": ctx["run_id"],
-        }
-        s3.put_object(
-            Bucket=bucket,
-            Key=f"pipeline-runs/{run_date}/summary.json",
-            Body=json.dumps(summary, indent=2).encode("utf-8"),
-            ContentType="application/json",
-        )
-        print(f"Pipeline SUCCESS for {run_date}")
-
     t_success = PythonOperator(
         task_id="pipeline_success",
-        python_callable=log_success,
+        python_callable=pipeline_success_task,
         doc_md="Persist success summary to S3.",
     )
 
-    def log_failure(**ctx):
-        import boto3
-
-        bucket = os.getenv("S3_BUCKET")
-        if not bucket:
-            try:
-                bucket = Variable.get("S3_BUCKET")
-            except Exception:
-                bucket = None
-        if not bucket:
-            print("S3_BUCKET no configurado; no se guarda resumen de fallo")
-            return
-
-        s3 = boto3.client("s3", region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"))
-        run_date = ctx["ds"]
-        dag_run = ctx["dag_run"]
-        failed_task_ids = sorted(
-            {
-                ti.task_id
-                for ti in dag_run.get_task_instances()
-                if ti.state in {"failed", "upstream_failed"}
-                and ti.task_id != ctx["task_instance"].task_id
-            }
-        )
-        summary = {
-            "run_date": run_date,
-            "status": "FAILED",
-            "failed_task": failed_task_ids[0] if failed_task_ids else "unknown",
-            "failed_tasks": failed_task_ids,
-            "completed": datetime.utcnow().isoformat(),
-            "dag_run_id": ctx["run_id"],
-            "action": "Revisar logs de tareas en Airflow",
-        }
-        s3.put_object(
-            Bucket=bucket,
-            Key=f"pipeline-runs/{run_date}/summary.json",
-            Body=json.dumps(summary, indent=2).encode("utf-8"),
-            ContentType="application/json",
-        )
-        print(f"Pipeline FALLÓ. Tareas upstream con error: {failed_task_ids or ['desconocida']}")
-
     t_failure = PythonOperator(
         task_id="pipeline_failure",
-        python_callable=log_failure,
+        python_callable=pipeline_failure_task,
         trigger_rule=TriggerRule.ONE_FAILED,
         doc_md="Guarda resumen de fallo en S3 cuando cualquier upstream falla.",
     )
