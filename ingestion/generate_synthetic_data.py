@@ -1,8 +1,9 @@
-"""Generate 5 synthetic datasets aligned to the coffee POS dataset."""
+"""Genera 5 datasets sintéticos alineados al dataset POS de café."""
 
 from __future__ import annotations
 
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -13,7 +14,6 @@ import pandas as pd
 SEED = 42
 np.random.seed(SEED)
 BRONZE_PATH = Path(os.getenv("DATA_BRONZE", "data/bronze"))
-RUN_DATE = datetime.today().strftime("%Y-%m-%d")
 
 DATE_START = datetime(2023, 1, 1)
 DATE_END = datetime(2023, 6, 30)
@@ -151,9 +151,14 @@ RECIPES = {
 }
 
 
+def resolve_run_date(run_date: str | None = None) -> str:
+    """Resuelve la fecha de ejecución de forma determinística."""
+    return run_date or os.getenv("RUN_DATE") or datetime.today().strftime("%Y-%m-%d")
+
+
 def generate_product_costs() -> pd.DataFrame:
-    """Simulate ERP product costs with yearly validity period."""
-    print("  Generating product_costs...")
+    """Simula costos de producto del ERP con vigencia anual."""
+    print("  Generando product_costs...")
     rows = []
     for product_name, attrs in PRODUCTS.items():
         unit_price = round(np.random.uniform(3.0, 8.5), 2)
@@ -173,13 +178,13 @@ def generate_product_costs() -> pd.DataFrame:
             }
         )
     df = pd.DataFrame(rows)
-    print(f"  ✓ {len(df)} products with costs")
+    print(f"  ✓ {len(df)} productos con costo")
     return df
 
 
 def generate_recipes_bom() -> pd.DataFrame:
-    """Generate bill of materials by product."""
-    print("  Generating recipes_bom...")
+    """Genera recetas tipo BOM por producto."""
+    print("  Generando recipes_bom...")
     rows = []
     for product_name, ingredients in RECIPES.items():
         for ing_name, qty in ingredients:
@@ -194,13 +199,13 @@ def generate_recipes_bom() -> pd.DataFrame:
                 }
             )
     df = pd.DataFrame(rows)
-    print(f"  ✓ {len(df)} recipe rows ({len(RECIPES)} products)")
+    print(f"  ✓ {len(df)} filas de receta ({len(RECIPES)} productos)")
     return df
 
 
 def generate_daily_inventory() -> pd.DataFrame:
-    """Generate daily store inventory snapshots (WMS-like)."""
-    print("  Generating daily_inventory...")
+    """Genera snapshots diarios de inventario por tienda (estilo WMS)."""
+    print("  Generando daily_inventory...")
     rows = []
 
     for store_id, store_name in STORES.items():
@@ -239,15 +244,15 @@ def generate_daily_inventory() -> pd.DataFrame:
 
     df = pd.DataFrame(rows)
     print(
-        f"  ✓ {len(df):,} inventory rows "
-        f"({len(STORES)} stores × {len(DATES)} days × {len(INGREDIENTS)} ingredients)"
+        f"  ✓ {len(df):,} filas de inventario "
+        f"({len(STORES)} tiendas × {len(DATES)} días × {len(INGREDIENTS)} ingredientes)"
     )
     return df
 
 
 def generate_staff_shifts() -> pd.DataFrame:
-    """Generate staffing shifts and labor cost by store/day."""
-    print("  Generating staff_shifts...")
+    """Genera turnos y costo laboral por tienda/día."""
+    print("  Generando staff_shifts...")
     rows = []
 
     shifts = {
@@ -290,13 +295,13 @@ def generate_staff_shifts() -> pd.DataFrame:
                 )
 
     df = pd.DataFrame(rows)
-    print(f"  ✓ {len(df):,} shift rows")
+    print(f"  ✓ {len(df):,} filas de turnos")
     return df
 
 
 def generate_promotions() -> pd.DataFrame:
-    """Generate CRM/loyalty promotions dataset."""
-    print("  Generating promotions...")
+    """Genera dataset de promociones de CRM/lealtad."""
+    print("  Generando promotions...")
     promos = [
         {
             "promotion_id": "PROMO_001",
@@ -336,12 +341,12 @@ def generate_promotions() -> pd.DataFrame:
         },
     ]
     df = pd.DataFrame(promos)
-    print(f"  ✓ {len(df)} promotions")
+    print(f"  ✓ {len(df)} promociones")
     return df
 
 
 def save_synthetic_to_bronze(df: pd.DataFrame, dataset_name: str, run_date: str) -> str:
-    """Save synthetic dataset under Bronze synthetic partitioned layout."""
+    """Guarda dataset sintético en Bronze con layout particionado."""
     output_dir = BRONZE_PATH / "synthetic" / dataset_name / f"ingestion_date={run_date}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -349,14 +354,16 @@ def save_synthetic_to_bronze(df: pd.DataFrame, dataset_name: str, run_date: str)
     df.to_csv(output_path, index=False)
 
     size_kb = output_path.stat().st_size / 1024
-    print(f"  → Saved {output_path.name} ({size_kb:.1f} KB)")
+    print(f"  → Guardado {output_path.name} ({size_kb:.1f} KB)")
     return str(output_path)
 
 
-def run_generate_synthetic() -> dict:
-    """Generate all synthetic datasets and persist to Bronze."""
+def run_generate_synthetic(run_date: str | None = None) -> dict:
+    """Genera todos los datasets sintéticos y los persiste en Bronze."""
+    resolved_run_date = resolve_run_date(run_date)
+
     print("\n" + "=" * 50)
-    print("SYNTHETIC DATA GENERATION -> Bronze")
+    print("GENERACIÓN DE DATOS SINTÉTICOS -> Bronze")
     print("=" * 50)
 
     datasets = {
@@ -370,11 +377,11 @@ def run_generate_synthetic() -> dict:
     results = {}
     for name, generator_fn in datasets.items():
         df = generator_fn()
-        path = save_synthetic_to_bronze(df, name, RUN_DATE)
+        path = save_synthetic_to_bronze(df, name, resolved_run_date)
         results[name] = {"rows": len(df), "path": path}
 
-    print("\n✓ All synthetic datasets generated")
-    print("\nSummary:")
+    print("\n✓ Todos los datasets sintéticos fueron generados")
+    print("\nResumen:")
     for name, info in results.items():
         print(f"  {name:<20} {info['rows']:>8,} rows -> {info['path']}")
 
@@ -382,4 +389,4 @@ def run_generate_synthetic() -> dict:
 
 
 if __name__ == "__main__":
-    run_generate_synthetic()
+    run_generate_synthetic(run_date=sys.argv[1] if len(sys.argv) > 1 else None)

@@ -1,6 +1,6 @@
 -- top_margin_products.sql
--- Athena query over dbt Gold schema.
--- Question: Which products are the most profitable?
+-- Query en Athena sobre esquema Gold de dbt.
+-- Pregunta: ¿Qué productos son los más rentables?
 
 SELECT
     dp.product_name,

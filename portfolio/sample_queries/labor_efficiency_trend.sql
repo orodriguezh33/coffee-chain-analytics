@@ -1,6 +1,6 @@
 -- labor_efficiency_trend.sql
--- Athena query over dbt Gold schema.
--- Question: Is labor efficiency improving week over week?
+-- Query en Athena sobre esquema Gold de dbt.
+-- Pregunta: ¿La eficiencia laboral mejora semana a semana?
 
 SELECT
     dd.year_month,

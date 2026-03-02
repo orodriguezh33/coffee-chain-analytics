@@ -1,8 +1,9 @@
-"""Upload local Bronze CSV files to S3 preserving partitioned paths."""
+"""Sube archivos CSV de Bronze local a S3 preservando particiones."""
 
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 import boto3
@@ -12,38 +13,49 @@ BRONZE_LOCAL = Path(os.getenv("DATA_BRONZE", "data/bronze"))
 REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
 
 
+def resolve_run_date(run_date: str | None = None) -> str:
+    """Resuelve run_date desde argumento/env/fecha actual."""
+    from datetime import datetime
+
+    return run_date or os.getenv("RUN_DATE") or datetime.today().strftime("%Y-%m-%d")
+
+
 def upload_file(s3_client, local_path: Path, s3_key: str) -> bool:
-    """Upload one file to S3 and print progress."""
+    """Sube un archivo a S3 y muestra el progreso."""
     try:
         s3_client.upload_file(str(local_path), BUCKET, s3_key)
         size_kb = local_path.stat().st_size / 1024
         print(f"  ✓ {s3_key} ({size_kb:.1f} KB)")
         return True
     except Exception as e:  # pragma: no cover - boto/network/runtime path
-        print(f"  ✗ Failed {s3_key}: {e}")
+        print(f"  ✗ Falló {s3_key}: {e}")
         return False
 
 
-def upload_bronze_to_s3() -> int:
-    """
-    Upload all files from local Bronze to s3://bucket/bronze/
-    preserving the existing folder/partition structure.
-    """
+def upload_bronze_to_s3(run_date: str | None = None, full_refresh: bool = False) -> int:
+    """Sube Bronze a S3; por defecto solo la partición de run_date."""
+    resolved_run_date = resolve_run_date(run_date)
+
     print("\n" + "=" * 55)
-    print("UPLOAD: Local Bronze -> S3 Bronze")
+    print("UPLOAD: Bronze Local -> S3 Bronze")
     print("=" * 55)
-    print(f"  Source:      {BRONZE_LOCAL}")
-    print(f"  Destination: s3://{BUCKET}/bronze/")
+    print(f"  Origen:      {BRONZE_LOCAL}")
+    print(f"  Destino:     s3://{BUCKET}/bronze/")
 
     s3 = boto3.client("s3", region_name=REGION)
-    csv_files = sorted(BRONZE_LOCAL.rglob("*.csv"))
+    if full_refresh:
+        csv_files = sorted(BRONZE_LOCAL.rglob("*.csv"))
+        print("  Modo:        recarga completa")
+    else:
+        csv_files = sorted(BRONZE_LOCAL.rglob(f"ingestion_date={resolved_run_date}/*.csv"))
+        print(f"  Modo:        incremental ({resolved_run_date})")
     if not csv_files:
         raise FileNotFoundError(
-            f"No CSV files found in {BRONZE_LOCAL}. "
-            "Run M1 first to generate data/bronze/."
+            f"No CSV files found for run_date={resolved_run_date} in {BRONZE_LOCAL}. "
+            "Ejecuta primero la ingesta o usa full_refresh=True."
         )
 
-    print(f"\n  Found {len(csv_files)} files to upload:\n")
+    print(f"\n  Se encontraron {len(csv_files)} archivos para subir:\n")
     uploaded = 0
     failed = 0
 
@@ -56,17 +68,17 @@ def upload_bronze_to_s3() -> int:
             failed += 1
 
     print(f"\n{'=' * 55}")
-    print(f"  Uploaded: {uploaded} files")
+    print(f"  Subidos: {uploaded} archivos")
     if failed:
-        print(f"  Failed:   {failed} files")
-        raise RuntimeError(f"{failed} files failed to upload")
-    print("  ✓ All files uploaded successfully")
+        print(f"  Fallidos: {failed} archivos")
+        raise RuntimeError(f"{failed} archivos fallaron al subir")
+    print("  ✓ Todos los archivos se subieron correctamente")
     return uploaded
 
 
 def verify_s3_upload() -> bool:
-    """Verify expected Bronze prefixes have at least one object in S3."""
-    print("\n-- Verifying S3 contents --------------------")
+    """Verifica que los prefijos esperados en Bronze tengan objetos en S3."""
+    print("\n-- Verificando contenido en S3 ---------------")
     s3 = boto3.client("s3", region_name=REGION)
 
     expected_prefixes = [
@@ -88,14 +100,21 @@ def verify_s3_upload() -> bool:
             print(f"  ✓ {prefix}")
             print(f"    -> {key.split('/')[-1]} ({size / 1024:.1f} KB)")
         else:
-            print(f"  ✗ No files found in {prefix}")
+            print(f"  ✗ No se encontraron archivos en {prefix}")
             all_good = False
     return all_good
 
 
 if __name__ == "__main__":
-    upload_bronze_to_s3()
+    full_refresh = "--all" in sys.argv
+    run_date = None
+    for arg in sys.argv[1:]:
+        if arg != "--all":
+            run_date = arg
+            break
+
+    upload_bronze_to_s3(run_date=run_date, full_refresh=full_refresh)
     ok = verify_s3_upload()
     if not ok:
         raise SystemExit(1)
-    print("\n✓ Bronze layer ready in S3")
+    print("\n✓ Capa Bronze lista en S3")

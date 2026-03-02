@@ -1,21 +1,16 @@
-"""Local orchestrator for M1 ingestion flow."""
+"""Orquestador local para el flujo de ingesta M1."""
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent))
-
-from generate_synthetic_data import run_generate_synthetic
-from ingest_pos import run_ingest_pos
+from ingestion.generate_synthetic_data import run_generate_synthetic
+from ingestion.ingest_pos import run_ingest_pos
 
 
 if __name__ == "__main__":
-    print("\nStarting local ingestion pipeline...")
+    print("\nIniciando pipeline local de ingesta...")
 
     run_ingest_pos()
     run_generate_synthetic()
 
     print("\n" + "=" * 50)
-    print("✓ Local ingestion complete")
-    print("  All files ready in data/bronze/")
+    print("✓ Ingesta local completada")
+    print("  Archivos listos en data/bronze/")
     print("=" * 50)

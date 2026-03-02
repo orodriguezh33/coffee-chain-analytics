@@ -1,6 +1,6 @@
 -- weekly_waste_by_store.sql
--- Athena query over dbt Gold schema.
--- Question: Which store is wasting the most by ingredient this week?
+-- Query en Athena sobre esquema Gold de dbt.
+-- Pregunta: ¿Qué tienda está teniendo más merma por ingrediente esta semana?
 
 SELECT
     ds.store_location,
