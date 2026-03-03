@@ -28,15 +28,14 @@ No se forzó una capa visual "demasiado completa" con métricas no modeladas tod
 - expansión a dashboards adicionales por audiencia
 
 ## KPIs implementados
-- `Revenue`: suma de `gross_revenue`
-- `Revenue Último Mes`: revenue del último mes disponible en el filtro
-- `MoM Growth %`: variación porcentual de revenue vs período anterior
+- `Revenue Último Mes`: revenue del último mes visible en el rango seleccionado
+- `MoM Growth %`: variación porcentual de revenue vs mes anterior
 - `Gross Profit`: suma de `gross_profit`
 - `Gross Margin %`: `Gross Profit / Revenue`
-- `Orders`: conteo de transacciones
+- `Orders`: conteo de órdenes / transacciones
 - `Average Order Value`: `Revenue / Orders`
 - `Labor Cost %`: `total_labor_cost / daily_revenue`
-- `Labor Cost Status`: semáforo operativo derivado de `Labor Cost %`
+- `Labor Cost Status`: estado operativo derivado de `Labor Cost %`
 - `Waste Amount`: suma de `waste_amount_usd`
 - `Waste Rate %`: merma relativa sobre consumo teórico
 - `Revenue per Labor Hour`: `daily_revenue / total_hours_worked`
@@ -50,8 +49,12 @@ No se forzó una capa visual "demasiado completa" con métricas no modeladas tod
 ### 1. Executive Dashboard
 - Audiencia: dirección y operaciones
 - Objetivo: resumir ventas, margen y volumen comercial del período filtrado
+- Filtros visibles:
+  - `store_name`
+  - `product_category`
+  - rango de fechas `full_date`
 - KPIs visibles:
-  - `Revenue`
+  - `Revenue Último Mes`
   - `MoM Growth %`
   - `Gross Margin %`
   - `Orders`
@@ -61,13 +64,21 @@ No se forzó una capa visual "demasiado completa" con métricas no modeladas tod
   - `Revenue` por día de semana
   - `Revenue` por categoría
   - `Revenue` por tienda
-  - tabla de productos con revenue y margen
+  - tabla de productos con `Revenue`, `Gross Margin %` y ranking
+- Lectura operativa:
+  - sirve para ver el tamaño del negocio en el período seleccionado
+  - compara el último mes contra el anterior
+  - muestra el mix por categoría, tienda y producto
 
 ![Executive Dashboard](img/01_executive_dashboard.png)
 
 ### 2. Labor & Waste Dashboard
 - Audiencia: operaciones / tienda
 - Objetivo: vigilar eficiencia laboral y comportamiento de merma
+- Filtros visibles:
+  - `product_category`
+  - `store_name`
+  - rango de fechas `full_date`
 - KPIs visibles:
   - `Labor Cost %`
   - `Labor Cost Status`
@@ -75,26 +86,38 @@ No se forzó una capa visual "demasiado completa" con métricas no modeladas tod
   - `Waste Amount`
   - `Revenue per Labor Hour`
 - Visuales principales:
-  - `Revenue` y `Labor Cost %` por mes
-  - `Waste Rate %` por mes
+  - gráfico combinado de `Revenue` y `Labor Cost %` por mes
+  - tendencia de `Waste Rate %` por mes
   - gauge de `Labor Cost %`
   - tabla de ingredientes con `Waste Rate %`
+- Lectura operativa:
+  - muestra si la labor está por encima del nivel esperado
+  - resume la presión de merma y su evolución mensual
+  - conecta eficiencia laboral con revenue generado
 
 ![Labor & Waste Dashboard](img/02_labor_waste_dashboard.png)
 
 ### 3. Inventory Dashboard
 - Audiencia: operación de tienda / control de inventario
 - Objetivo: detectar riesgo de quiebre y monitorear disponibilidad de ingredientes
+- Filtros visibles:
+  - `product_category`
+  - `store_name`
+  - rango de fechas `full_date`
 - KPIs visibles:
   - `Stockout HIGH Count Último Día`
   - `Avg Days Inventory`
   - `Closing Stock`
   - `Units Received`
 - Visuales principales:
-  - tabla de ingredientes con días de inventario del último día
+  - tabla de ingredientes del último día con días de inventario y nivel de riesgo
   - tendencia de `Avg Days Inventory`
   - `Stockout HIGH Count` por tienda
-  - promedio de días de inventario por ingrediente
+  - matriz de cobertura por tienda e ingrediente
+- Lectura operativa:
+  - identifica ingredientes con riesgo alto de quiebre
+  - muestra cobertura promedio del inventario disponible
+  - combina una vista puntual del último día con una vista agregada por tienda
 
 ![Inventory Dashboard](img/03_inventory_dashboard.png)
 

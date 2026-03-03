@@ -7,6 +7,11 @@ Plataforma analítica end-to-end para retail de café con `S3 + Athena + dbt + A
 - riesgo de stockout
 - eficiencia laboral
 
+La entrega actual de BI incluye `3 dashboards` funcionales:
+- `Executive Dashboard`
+- `Labor & Waste Dashboard`
+- `Inventory Dashboard`
+
 ## Bullets de CV
 
 ### Data Engineer
@@ -27,13 +32,13 @@ En operación retail, el POS por sí solo no explica el negocio. Para medir merm
 - Athena como capa analítica
 - dbt para modelado y testing
 - Airflow para orquestación
-- Power BI para consumo
+- Power BI para consumo mediante snapshot exportado desde Athena
 
 ### Decisión clave
 El modelo se diseñó con grano explícito. `fct_sales` opera a nivel línea de producto y `fct_waste` a nivel ingrediente x tienda x día. Esa decisión hace posible medir merma de forma defendible.
 
 ### Diferenciador
-La pieza fuerte del proyecto es `Waste & Inventory`, porque une POS, BOM y snapshot físico de inventario. La mayoría de proyectos públicos con este dataset se quedan en ventas y margen.
+La pieza fuerte del proyecto es `Inventory` y la capa de `Labor & Waste`, porque unen POS, BOM y snapshot físico de inventario. La mayoría de proyectos públicos con este dataset se quedan en ventas y margen.
 
 ## Preguntas difíciles
 
