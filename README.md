@@ -11,11 +11,11 @@ Este proyecto construye una plataforma analítica completa que une ventas, costo
 
 | Decisión | KPI | Frecuencia |
 |---|---|---|
-| Qué productos promover | Margen bruto % por producto | Diario |
-| Cuándo reordenar ingredientes | Riesgo de quiebre de stock | Diario |
-| Cómo planificar turnos | Costo laboral % por turno | Diario |
-| Si una promoción funcionó | Métricas de impacto promocional | Por evento |
-| Dónde está la merma | Waste rate % por ingrediente | Diario |
+| Qué productos venden más y con mejor margen | Revenue, Gross Margin % | Diario |
+| Cómo evoluciona la eficiencia del negocio | MoM Growth %, Average Order Value | Semanal |
+| Si el costo laboral está bajo control | Labor Cost %, Revenue per Labor Hour | Diario |
+| Dónde se concentra la merma | Waste Rate %, Waste Amount | Diario |
+| Qué ingredientes están en riesgo | Stockout HIGH Count, Avg Days Inventory | Diario |
 
 ## Arquitectura (alcance actual)
 
@@ -51,15 +51,13 @@ Marts principales implementados en el esquema Gold de dbt:
 - Hechos: `fct_sales`, `fct_waste`, `fct_labor`, `fct_inventory_snapshot`
 - Dimensiones: `dim_date`, `dim_store`, `dim_product`, `dim_ingredient`
 
-## Dashboards
+## Dashboards entregados
 
 | Dashboard | Audiencia | Decisión |
 |---|---|---|
-| Executive Summary | Dirección / operaciones | ¿Vamos en línea con el mes? |
-| Financial Deep Dive | Finanzas / analista | ¿Qué productos tienen margen no sostenible? |
-| Waste & Inventory | Gerente de tienda | ¿Qué se debe reordenar antes de abrir? |
-| Labor Efficiency | Operaciones / RRHH | ¿El staffing está alineado con la demanda? |
-| Branch & Product | Director de operaciones | ¿Qué tienda necesita intervención esta semana? |
+| Executive Dashboard | Dirección / operaciones | ¿Cómo va el negocio en ventas, margen y volumen? |
+| Labor & Waste Dashboard | Operaciones / tienda | ¿La labor y la merma están bajo control? |
+| Inventory Dashboard | Operación / inventario | ¿Qué ingredientes están en riesgo y cuánto inventario queda? |
 
 ## Estructura del repositorio
 
@@ -128,4 +126,4 @@ El objetivo del repositorio es mostrar un flujo completo y entendible:
 - orquestación
 - consumo en BI
 
-La prioridad fue dejar un proyecto claro, reproducible y defendible para un primer portafolio serio de datos.
+La versión actual del reporte Power BI prioriza 3 dashboards funcionales y defendibles sobre una capa visual inflada. Las siguientes iteraciones pueden ampliar comparativos, diseño visual y nuevos tableros sin cambiar la arquitectura base.
